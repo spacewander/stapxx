@@ -1,0 +1,24 @@
+#!/usr/bin/env stap++
+
+probe begin {
+    printf("Start tracing %d ($^exec_path)...\n", target())
+}
+
+global aesni_checked = 0
+
+probe process("$^libcrypto_path").function("aesni_*")
+{
+    if (pid() == target()) {
+        if (aesni_checked == 0) {
+            println("AES-NI used")
+            aesni_checked = 1
+        }
+    }
+}
+
+probe process("$^libssl_path").function("SSL_do_handshake").return
+{
+    if (pid() == target()) {
+        println("address: ", &@var("s")->session->cipher)
+    }
+}
